@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/signintech/gopdf"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,6 +13,9 @@ import (
 const PATH = "result"
 
 func main() {
+	pdf := gopdf.GoPdf{}
+	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeLetter})
+
 	root, err := os.Getwd()
 	if err != nil {
 		log.Println(err)
@@ -27,9 +31,16 @@ func main() {
 				exec.Command("magick", root+"\\"+file.Name(), root+"\\"+PATH+"\\"+file.Name()+".ppm").Output()
 				exec.Command("potrace", root+"\\"+PATH+"\\"+file.Name()+".ppm", "-b", "pdfpage", "-o", root+"\\"+PATH+"\\"+file.Name()+".pdf").Output()
 				os.Remove(root + "\\" + PATH + "\\" + file.Name() + ".ppm")
+				pdf.AddPage()
+				tpl1 := pdf.ImportPage(root+"\\"+PATH+"\\"+file.Name()+".pdf", 1, "/MediaBox")
+				pdf.UseImportedTemplate(tpl1, 0, 0, 0, 0)
+				pdf.AddPage()
+
 			}
 		}
 	}
+	pdf.WritePdf("pdk-result.pdf")
+	os.RemoveAll(root + "\\" + PATH)
 }
 func check(err error) {
 	if err != nil {
