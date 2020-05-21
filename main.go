@@ -3,16 +3,28 @@ package main
 import (
 	"fmt"
 	"github.com/signintech/gopdf"
+	"github.com/thrawn01/args"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
+	"time"
 )
+
+type Config struct {
+	Random bool
+}
 
 const PATH = "result"
 
+var confg Config
+
 func main() {
+	parser := args.NewParser()
+	parser.AddOption("--random").Alias("-r").IsTrue().StoreTrue(&confg.Random).Help("Random")
+	parser.ParseOrExit(nil)
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeLetter})
 
@@ -23,21 +35,28 @@ func main() {
 	os.Mkdir(root+"\\"+PATH, 0666)
 	files, err := ioutil.ReadDir(root)
 	check(err)
+	legalFiles := []os.FileInfo{}
 	for _, file := range files {
 		if !file.IsDir() {
 			fileType := GetFileType(file.Name())
 			if fileType == "image/jpeg" || fileType == "image/png" || fileType == "image/jpg" || fileType == "image/bmp" || fileType == "image/x-bmp" {
-				fmt.Println(root + "\\" + file.Name())
-				exec.Command("magick", root+"\\"+file.Name(), root+"\\"+PATH+"\\"+file.Name()+".ppm").Output()
-				exec.Command("potrace", root+"\\"+PATH+"\\"+file.Name()+".ppm", "-b", "pdfpage", "-o", root+"\\"+PATH+"\\"+file.Name()+".pdf").Output()
-				os.Remove(root + "\\" + PATH + "\\" + file.Name() + ".ppm")
-				pdf.AddPage()
-				tpl1 := pdf.ImportPage(root+"\\"+PATH+"\\"+file.Name()+".pdf", 1, "/MediaBox")
-				pdf.UseImportedTemplate(tpl1, 0, 0, 0, 0)
-				pdf.AddPage()
-
+				legalFiles = append(legalFiles, file)
 			}
 		}
+	}
+	if confg.Random {
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(legalFiles), func(i, j int) { legalFiles[i], legalFiles[j] = legalFiles[j], legalFiles[i] })
+	}
+	for _, file := range legalFiles {
+		fmt.Println(root + "\\" + file.Name())
+		exec.Command("magick", root+"\\"+file.Name(), root+"\\"+PATH+"\\"+file.Name()+".ppm").Output()
+		exec.Command("potrace", root+"\\"+PATH+"\\"+file.Name()+".ppm", "-b", "pdfpage", "-o", root+"\\"+PATH+"\\"+file.Name()+".pdf").Output()
+		os.Remove(root + "\\" + PATH + "\\" + file.Name() + ".ppm")
+		pdf.AddPage()
+		tpl1 := pdf.ImportPage(root+"\\"+PATH+"\\"+file.Name()+".pdf", 1, "/MediaBox")
+		pdf.UseImportedTemplate(tpl1, 0, 0, 0, 0)
+		pdf.AddPage()
 	}
 	pdf.WritePdf("pdk-result.pdf")
 	os.RemoveAll(root + "\\" + PATH)
