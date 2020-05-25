@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"time"
 )
 
@@ -32,6 +33,13 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
+
+	filePath, err := os.Executable()
+	if err != nil {
+		log.Println(err)
+	}
+	fontPath := filepath.Dir(filePath)
+
 	os.Mkdir(root+"\\"+PATH, 0666)
 	files, err := ioutil.ReadDir(root)
 	check(err)
@@ -39,7 +47,7 @@ func main() {
 	for _, file := range files {
 		if !file.IsDir() {
 			fileType := GetFileType(file.Name())
-			if fileType == "image/jpeg" || fileType == "image/png" || fileType == "image/jpg" || fileType == "image/bmp" || fileType == "image/x-bmp" {
+			if fileType == "image/jpeg" || fileType == "image/png" || fileType == "image/jpg" || fileType == "image/bmp" || fileType == "image/gif" || fileType == "image/x-bmp" {
 				legalFiles = append(legalFiles, file)
 			}
 		}
@@ -57,6 +65,24 @@ func main() {
 		tpl1 := pdf.ImportPage(root+"\\"+PATH+"\\"+file.Name()+".pdf", 1, "/MediaBox")
 		pdf.UseImportedTemplate(tpl1, 0, 0, 0, 0)
 		pdf.AddPage()
+		err := pdf.AddTTFFont("Roboto", fontPath+"\\Roboto-Regular.ttf")
+		if err != nil {
+			log.Print(err.Error())
+			return
+		}
+		fontSize := 2
+		err = pdf.SetFont("Roboto", "", fontSize)
+		if err != nil {
+			log.Print(err.Error())
+			return
+		}
+		//pdf.SetGrayFill(0.5)
+		//pdf.Cell(nil, "Áa")
+
+		//Measure Width
+		text := " "
+		pdf.Cell(nil, text)
+
 	}
 	pdf.WritePdf("pdk-result.pdf")
 	os.RemoveAll(root + "\\" + PATH)
