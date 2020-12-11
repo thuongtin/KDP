@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/martinlindhe/notify"
 	"github.com/signintech/gopdf"
 	"github.com/thrawn01/args"
 	"io/ioutil"
@@ -86,6 +87,7 @@ func main() {
 	}
 	pdf.WritePdf("pdk-result.pdf")
 	os.RemoveAll(root + "\\" + PATH)
+	notify.Notify("KDP", "DKP", "Xong nha", "")
 }
 func check(err error) {
 	if err != nil {
